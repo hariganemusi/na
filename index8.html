@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>卓球ゲーム（10点先取）</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    color: white;
+    text-align: center;
+    font-family: sans-serif;
+  }
+  canvas {
+    background: #000;
+    display: block;
+    margin: 20px auto;
+    border: 2px solid white;
+  }
+</style>
+</head>
+<body>
+
+<h1>卓球ゲーム</h1>
+<p>操作：W / Sキー　|　10点先取　|　スペースでリスタート</p>
+<canvas id="game" width="800" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const paddleWidth = 10;
+const paddleHeight = 80;
+
+let leftY = 160;
+let rightY = 160;
+
+let leftScore = 0;
+let rightScore = 0;
+
+let ballX, ballY;
+let ballSize = 10;
+let ballSpeedX, ballSpeedY;
+
+let gameOver = false;
+
+const keys = {};
+
+document.addEventListener("keydown", e => {
+  keys[e.key] = true;
+
+  // スペースでリスタート
+  if (gameOver && e.key === " ") {
+    leftScore = 0;
+    rightScore = 0;
+    gameOver = false;
+    resetBall();
+  }
+});
+
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+function resetBall() {
+  ballX = canvas.width / 2;
+  ballY = canvas.height / 2;
+  ballSpeedX = Math.random() > 0.5 ? 4 : -4;
+  ballSpeedY = Math.random() * 4 - 2;
+}
+
+function update() {
+  if (gameOver) return;
+
+  // プレイヤー操作
+  if (keys["w"] && leftY > 0) leftY -= 5;
+  if (keys["s"] && leftY < canvas.height - paddleHeight) leftY += 5;
+
+  // CPU
+  let cpuCenter = rightY + paddleHeight / 2;
+  if (cpuCenter < ballY - 10) rightY += 4;
+  else if (cpuCenter > ballY + 10) rightY -= 4;
+
+  rightY = Math.max(0, Math.min(canvas.height - paddleHeight, rightY));
+
+  // ボール
+  ballX += ballSpeedX;
+  ballY += ballSpeedY;
+
+  // 壁反射
+  if (ballY < 0 || ballY > canvas.height - ballSize) {
+    ballSpeedY *= -1;
+  }
+
+  // 左衝突
+  if (
+    ballX < 20 &&
+    ballY > leftY &&
+    ballY < leftY + paddleHeight
+  ) {
+    ballSpeedX *= -1.1;
+  }
+
+  // 右衝突
+  if (
+    ballX > canvas.width - 20 &&
+    ballY > rightY &&
+    ballY < rightY + paddleHeight
+  ) {
+    ballSpeedX *= -1.1;
+  }
+
+  // 得点
+  if (ballX < 0) {
+    rightScore++;
+    checkWinner();
+    resetBall();
+  } else if (ballX > canvas.width) {
+    leftScore++;
+    checkWinner();
+    resetBall();
+  }
+}
+
+function checkWinner() {
+  if (leftScore >= 10 || rightScore >= 10) {
+    gameOver = true;
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "white";
+
+  // 中央線
+  for (let i = 0; i < canvas.height; i += 20) {
+    ctx.fillRect(canvas.width / 2 - 1, i, 2, 10);
+  }
+
+  // スコア
+  ctx.font = "30px sans-serif";
+  ctx.fillText(leftScore, canvas.width / 4, 40);
+  ctx.fillText(rightScore, canvas.width * 3 / 4, 40);
+
+  // ラケット
+  ctx.fillRect(10, leftY, paddleWidth, paddleHeight);
+  ctx.fillRect(canvas.width - 20, rightY, paddleWidth, paddleHeight);
+
+  // ボール
+  ctx.fillRect(ballX, ballY, ballSize, ballSize);
+
+  // 勝敗表示
+  if (gameOver) {
+    ctx.font = "40px sans-serif";
+    ctx.textAlign = "center";
+    const text = leftScore > rightScore ? "あなたの勝ち！" : "CPUの勝ち！";
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+    ctx.font = "20px sans-serif";
+    ctx.fillText("スペースキーでリスタート", canvas.width / 2, canvas.height / 2 + 40);
+    ctx.textAlign = "left";
+  }
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+resetBall();
+gameLoop();
+</script>
+
+</body>
+</html>
